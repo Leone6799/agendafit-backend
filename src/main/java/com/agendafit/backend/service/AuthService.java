@@ -5,55 +5,51 @@ import com.agendafit.backend.dto.LoginRequest;
 import com.agendafit.backend.enums.TipoUsuario;
 import com.agendafit.backend.model.Usuario;
 import com.agendafit.backend.repository.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 public class AuthService {
 
-    private final UsuarioRepository usuarioRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
-    public AuthService(
-            UsuarioRepository usuarioRepository,
-            BCryptPasswordEncoder passwordEncoder
-    ) {
-        this.usuarioRepository = usuarioRepository;
-        this.passwordEncoder = passwordEncoder;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public Usuario login(LoginRequest request) {
+        // Busca o usuário pelo e-mail
+        Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("E-mail ou senha inválidos"));
+
+        // Compara a senha em texto puro digitada com a criptografada do banco
+        if (passwordEncoder.matches(request.getSenha(), usuario.getSenha())) {
+            return usuario;
+        } else {
+            throw new RuntimeException("E-mail ou senha inválidos");
+        }
     }
 
+    // NOME CORRIGIDO PARA BATER COM O CONTROLLER
     public Usuario cadastrarPaciente(CadastroRequest request) {
-        if (usuarioRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Já existe usuário cadastrado com esse e-mail.");
+        // Verifica se o e-mail já existe
+        Optional<Usuario> usuarioExistente = usuarioRepository.findByEmail(request.getEmail());
+        if (usuarioExistente.isPresent()) {
+            throw new RuntimeException("E-mail já está em uso");
         }
 
-        String senhaCriptografada = passwordEncoder.encode(request.getSenha());
-
-        Usuario usuario = new Usuario(
+        // Monta o novo usuário forçando o tipo PACIENTE nativamente
+        Usuario novoUsuario = new Usuario(
                 request.getNome(),
                 request.getIdade(),
                 request.getEmail(),
+                request.getSenha(), // O Usuario.java intercepta e criptografa
                 request.getTelefone(),
-                senhaCriptografada,
-                TipoUsuario.PACIENTE
+                TipoUsuario.PACIENTE // Definido diretamente (resolve o erro do getTipo)
         );
 
-        return usuarioRepository.save(usuario);
-    }
-
-    public Usuario login(LoginRequest request) {
-        Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("E-mail ou senha inválidos."));
-
-        boolean senhaCorreta = passwordEncoder.matches(
-                request.getSenha(),
-                usuario.getSenha()
-        );
-
-        if (!senhaCorreta) {
-            throw new RuntimeException("E-mail ou senha inválidos.");
-        }
-
-        return usuario;
+        return usuarioRepository.save(novoUsuario);
     }
 }

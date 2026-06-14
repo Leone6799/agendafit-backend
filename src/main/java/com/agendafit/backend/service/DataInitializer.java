@@ -5,72 +5,40 @@ import com.agendafit.backend.model.HorarioDisponivel;
 import com.agendafit.backend.model.Usuario;
 import com.agendafit.backend.repository.HorarioDisponivelRepository;
 import com.agendafit.backend.repository.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-@Component
+@Service
 public class DataInitializer implements CommandLineRunner {
 
-    private final UsuarioRepository usuarioRepository;
-    private final HorarioDisponivelRepository horarioDisponivelRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
-    public DataInitializer(
-            UsuarioRepository usuarioRepository,
-            HorarioDisponivelRepository horarioDisponivelRepository,
-            BCryptPasswordEncoder passwordEncoder
-    ) {
-        this.usuarioRepository = usuarioRepository;
-        this.horarioDisponivelRepository = horarioDisponivelRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+    @Autowired
+    private HorarioDisponivelRepository horarioRepository;
 
     @Override
-    public void run(String... args) {
-        Usuario nutricionista = usuarioRepository.findByEmail("nutri@agendafit.com")
-                .orElseGet(() -> {
-                    Usuario novoNutricionista = new Usuario(
-                            "Nutricionista Admin",
-                            32,
-                            "nutri@agendafit.com",
-                            "71999999999",
-                            passwordEncoder.encode("123456"),
-                            TipoUsuario.NUTRICIONISTA
-                    );
+    public void run(String... args) throws Exception {
+        Usuario admin;
+        if (usuarioRepository.count() == 0) {
+            admin = new Usuario("Nutricionista Admin", 30, "admin@nutri.com", "123456", "5511999999999", TipoUsuario.NUTRICIONISTA);
+            admin = usuarioRepository.save(admin);
+        } else {
+            admin = usuarioRepository.findAll().get(0);
+        }
 
-                    return usuarioRepository.save(novoNutricionista);
-                });
-
-        LocalTime[] horarios = {
-                LocalTime.of(8, 0),
-                LocalTime.of(9, 0),
-                LocalTime.of(10, 0),
-                LocalTime.of(14, 0),
-                LocalTime.of(15, 0),
-                LocalTime.of(16, 0)
-        };
-
-        for (int dia = 1; dia <= 20; dia++) {
-            LocalDate data = LocalDate.now().plusDays(dia);
-
-            for (LocalTime horario : horarios) {
-                boolean jaExiste = horarioDisponivelRepository
-                        .existsByDataAndHorarioAndNutricionista(data, horario, nutricionista);
-
-                if (!jaExiste) {
-                    HorarioDisponivel horarioDisponivel = new HorarioDisponivel(
-                            data,
-                            horario,
-                            true,
-                            nutricionista
-                    );
-
-                    horarioDisponivelRepository.save(horarioDisponivel);
-                }
+        if (horarioRepository.count() == 0) {
+            LocalDate hoje = LocalDate.now();
+            for (int i = 0; i < 7; i++) {
+                LocalDate dataTeste = hoje.plusDays(i);
+                // Agora passamos o 'admin' como 4º argumento, satisfazendo o compilador
+                horarioRepository.save(new HorarioDisponivel(dataTeste, LocalTime.of(9, 0), true, admin));
+                horarioRepository.save(new HorarioDisponivel(dataTeste, LocalTime.of(14, 0), true, admin));
+                horarioRepository.save(new HorarioDisponivel(dataTeste, LocalTime.of(16, 0), true, admin));
             }
         }
     }
