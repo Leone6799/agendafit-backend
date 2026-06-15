@@ -8,6 +8,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/consultas")
+@CrossOrigin(origins = "*")
 public class ConsultaController {
 
     private final ConsultaService consultaService;
@@ -26,7 +27,7 @@ public class ConsultaController {
         return consultaService.listarConsultasPaciente(pacienteId);
     }
 
-    @GetMapping("/admin")
+    @GetMapping 
     public List<Consulta> listarConsultasAdmin() {
         return consultaService.listarConsultasAdmin();
     }
