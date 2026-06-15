@@ -11,6 +11,7 @@ import com.agendafit.backend.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,8 +57,12 @@ public class ConsultaService {
             consulta.setNutricionista(horarioDisp.getNutricionista());
         }
 
-        // Associa o objeto HorarioDisponivel inteiro ao relacionamento da consulta
-        consulta.setHorario(horarioDisp);
+        // CORREÇÃO: O objeto Consulta espera a hora exata (LocalTime) e não a entidade inteira
+        consulta.setHorario(horarioDisp.getHorario());
+        
+        // Se a sua entidade Consulta também armazena a data, descomente a linha abaixo:
+        // consulta.setData(horarioDisp.getData());
+        
         consulta.setStatus(StatusConsulta.PENDENTE);
 
         // Bloqueia o horário para que mais ninguém o veja disponível
@@ -121,13 +126,19 @@ public class ConsultaService {
         
         consulta.setStatus(novoStatus);
         
-        // CORREÇÃO DO COMPILADOR: Extrai o objeto HorarioDisponivel mapeado na Consulta
-        HorarioDisponivel horario = consulta.getHorario();
+        // CORREÇÃO DO COMPILADOR: Extrai a hora mapeada na Consulta, pois ela não contém o objeto HorarioDisponivel
+        LocalTime horaConsulta = consulta.getHorario();
         
-        // Se a consulta foi cancelada, libera o horário de volta no calendário
-        if (novoStatus == StatusConsulta.CANCELADA && horario != null) {
-            horario.setDisponivel(true);
-            horarioDisponivelRepository.save(horario);
+        // Se a consulta foi cancelada, liberta o horário de volta no calendário
+        if (novoStatus == StatusConsulta.CANCELADA && horaConsulta != null) {
+            // Como temos apenas o LocalTime salvo, buscamos a entidade original na base de dados para atualizar
+            horarioDisponivelRepository.findAll().stream()
+                    .filter(hd -> hd.getHorario() != null && hd.getHorario().equals(horaConsulta))
+                    .findFirst()
+                    .ifPresent(hd -> {
+                        hd.setDisponivel(true);
+                        horarioDisponivelRepository.save(hd);
+                    });
         }
         
         Consulta consultaAtualizada = consultaRepository.save(consulta);
@@ -139,10 +150,12 @@ public class ConsultaService {
                     String telefone = consultaAtualizada.getPaciente().getTelefone();
                     String nome = consultaAtualizada.getPaciente().getNome();
                     
-                    // Extrai as strings de data e tempo de dentro do objeto contido na Consulta
-                    String dataStr = (horario != null && horario.getData() != null) ? horario.getData().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "";
-                    String horaStr = (horario != null && horario.getHorario() != null) ? horario.getHorario().toString() : "";
-                    String dataHoraFormatada = dataStr + " às " + horaStr;
+                    // Utiliza a hora que já estava salva na Consulta
+                    String horaStr = horaConsulta != null ? horaConsulta.toString() : "";
+                    
+                    // Se a entidade Consulta tiver o campo de Data, pode adicioná-lo aqui.
+                    // Por enquanto enviaremos apenas com o horário para evitar novos erros.
+                    String dataHoraFormatada = "Horário: " + horaStr; 
 
                     whatsappService.notificarCancelamento(telefone, nome, dataHoraFormatada);
                 }

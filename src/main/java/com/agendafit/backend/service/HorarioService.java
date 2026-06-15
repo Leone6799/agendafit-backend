@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class HorarioService {
@@ -15,17 +14,16 @@ public class HorarioService {
     private HorarioDisponivelRepository repository;
 
     public List<LocalDate> listarDatasDisponiveis() {
-        return repository.findAll().stream()
-                .filter(HorarioDisponivel::getDisponivel)
-                .map(HorarioDisponivel::getData)
-                .distinct()
-                .collect(Collectors.toList());
+        // Usa a query do banco de dados que já filtra por "disponível = true",
+        // remove duplicatas e traz apenas datas a partir de hoje.
+        return repository.buscarDatasDisponiveis(LocalDate.now());
     }
 
     public List<HorarioDisponivel> listarHorariosDisponiveis(String data) {
         LocalDate dataConvertida = LocalDate.parse(data);
-        return repository.findAll().stream()
-                .filter(h -> h.getData().equals(dataConvertida) && h.getDisponivel())
-                .collect(Collectors.toList());
+        
+        // Usa o método inteligente do Spring Data que busca apenas horários daquela data,
+        // garantindo que "disponível = true" e já organizando as horas de forma crescente.
+        return repository.findByDataAndDisponivelTrueOrderByHorarioAsc(dataConvertida);
     }
 }
