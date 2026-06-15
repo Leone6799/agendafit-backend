@@ -2,8 +2,10 @@ package com.agendafit.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
+@ComponentScan(basePackages = "com.agendafit.backend") // FORÇANDO O SCAN
 public class AgendafitBackendApplication {
 
     public static void main(String[] args) {

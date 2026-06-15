@@ -13,7 +13,6 @@ public class AgendamentoRequest {
 
     public Long getPacienteId() { return pacienteId; }
     public void setPacienteId(Long pacienteId) { this.pacienteId = pacienteId; }
-
     public Long getHorarioId() { return horarioId; }
     public void setHorarioId(Long horarioId) { this.horarioId = horarioId; }
 }

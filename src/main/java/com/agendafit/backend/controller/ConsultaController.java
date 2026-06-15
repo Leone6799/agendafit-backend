@@ -4,7 +4,6 @@ import com.agendafit.backend.dto.AgendamentoRequest;
 import com.agendafit.backend.model.Consulta;
 import com.agendafit.backend.service.ConsultaService;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
